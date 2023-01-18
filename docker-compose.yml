@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+    
+    db:
+        image: "mariadb:10.10"
+        environment:
+            MARIADB_ROOT_PASSWORD: root
+            MARIADB_DATABASE: docker-konnekt
+            MARIADB_USER: app
+            MARIADB_PASSWORD: password
+    
+    # db3:
+    #     image: "mariadb:10.10"
+    #     environment:
+    #         MARIADB_ROOT_PASSWORD: root
+    #         MARIADB_DATABASE: docker-konnekt
+    #         MARIADB_USER: app
+    #         MARIADB_PASSWORD: password
+
+    php:
+        build:
+            context: ./docker/php
+            dockerfile: Dockerfile
+        volumes:
+            - ./:/var/www/app
+            - ./var/log:/var/www/app/var/log:delegated
+            - ./vendor:/var/www/app/var/vendor:delegated
+            - cache:/var/www/app/var/cache:0777
+        depends_on:
+            - db
+
+    nginx:
+        build:
+            context: ./docker/nginx
+            dockerfile: Dockerfile
+        volumes:
+            - ./public:/var/www/app/public
+        ports:
+            - "8081:80" 
+        depends_on:
+            - php
+
+    phpmyadmin:
+        image: phpmyadmin
+        ports:
+            - "8082:80" 
+        environment:
+            # PMA_HOSTS: db,db3
+            PMA_HOSTS: db,db2
+        depends_on:
+            - db
+
+    maildev:
+        image: "maildev/maildev"
+        command: bin/maildev --web 80 --smtp 25 --hide-extensions STARTTLS 
+        ports:
+            - "8083:80" 
+
+volumes:
+    cache: ~
